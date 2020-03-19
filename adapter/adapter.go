@@ -4,6 +4,6 @@ import (
 	"fmt"
 )
 
-func (adapter *Adapter) test(msg string) {
+func test(msg string) {
 	fmt.Println(msg)
 }
