@@ -3,7 +3,7 @@ package adapter
 import (
 	"fmt"
 	"database/sql"
-	"strconv"
+	// "strconv"
 	"github.com/fatih/color"
 	_ "github.com/lib/pq"
 
@@ -39,12 +39,12 @@ func Initialize(path string) {
 	if err != nil {
         fmt.Printf("yamlFile.Get err   #%v ", err)
     }
-    err = yaml.Unmarshal(yamlFile, c)
+    err = yaml.Unmarshal(yamlFile, en)
     if err != nil {
         fmt.Fatalf("Unmarshal: %v", err)
     }
 
-    return c
+    return en
 	// maxIdleConnection, err := strconv.Atoi(config["maxIdleConnection"])
 	// if err != nil {
 	// 	panic(err)
