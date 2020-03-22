@@ -32,7 +32,7 @@ type Adapter struct {
 	MaxOpenConnection int `yaml:"maxOpenConnection"`
 }
 
-func Initialize(path string) {
+func Initialize(path string) Enviroment {
 	yamlFile, err := ioutil.ReadFile(path)
 	var en Enviroment
 	if err != nil {
