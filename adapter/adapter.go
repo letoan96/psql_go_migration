@@ -40,6 +40,7 @@ func Initialize(path string) Enviroment {
     }
     err = yaml.Unmarshal(yamlFile, en)
     if err != nil {
+    	
         fmt.Printf("Unmarshal: %v", err)
     }
 
