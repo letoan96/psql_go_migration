@@ -3,7 +3,6 @@ package adapter
 import (
 	"fmt"
 	"database/sql"
-	// "strconv"
 	"github.com/fatih/color"
 	_ "github.com/lib/pq"
 
