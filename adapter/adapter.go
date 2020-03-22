@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"github.com/fatih/color"
 	_ "github.com/lib/pq"
+
+	"gopkg.in/yaml.v2"
+    "io/ioutil"
 )
 
 type DB struct {
@@ -13,40 +16,93 @@ type DB struct {
 	*Adapter
 }
 
+type Enviroment struct {
+    development Adapter `yaml:"development"`
+    staging 	Adapter `yaml:"staging"`
+    production  Adapter `yaml:"production"`
+}
+
 type Adapter struct {
-	Type 		string
-	Database    string
-	Username    string
-	Password    string
-	Host        string
-	Port        string
-	MaxIdleConnection int
-	MaxOpenConnection int 
+	Type 		string `yaml:"type"`
+	Database    string `yaml:"database"`
+	Username    string `yaml:"username"`
+	Password    string `yaml:"password"`
+	Host        string `yaml:"host"`
+	Port        string `yaml:"port"`
+	MaxIdleConnection int `yaml:"maxIdleConnection"`
+	MaxOpenConnection int `yaml:"maxOpenConnection"`
 }
 
-func Initialize(config map[string]string) Adapter {
-	maxIdleConnection, err := strconv.Atoi(config["maxIdleConnection"])
+func Initialize(path string) {
+	yamlFile, err := ioutil.ReadFile(path)
+	var en Enviroment
 	if err != nil {
-		panic(err)
-	}
+        fmt.Printf("yamlFile.Get err   #%v ", err)
+    }
+    err = yaml.Unmarshal(yamlFile, c)
+    if err != nil {
+        fmt.Fatalf("Unmarshal: %v", err)
+    }
 
-	maxOpenConnection, err := strconv.Atoi(config["maxOpenConnection"])
-	if err != nil {
-		panic(err)
-	}
+    return c
+	// maxIdleConnection, err := strconv.Atoi(config["maxIdleConnection"])
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	adapter := Adapter {
-		Type: 		 config["type"] ,
-		Database:	 config["database"],
-		Username: 	 config["username"],
-		Password:	 config["password"],
-		Host:		 config["host"],
-		Port:		 config["port"],
-		MaxIdleConnection: maxIdleConnection,
-		MaxOpenConnection: maxOpenConnection,
-	}
-	return adapter
+	// maxOpenConnection, err := strconv.Atoi(config["maxOpenConnection"])
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// adapter := Adapter {
+	// 	Type: 		 config["type"] ,
+	// 	Database:	 config["database"],
+	// 	Username: 	 config["username"],
+	// 	Password:	 config["password"],
+	// 	Host:		 config["host"],
+	// 	Port:		 config["port"],
+	// 	MaxIdleConnection: maxIdleConnection,
+	// 	MaxOpenConnection: maxOpenConnection,
+	// }
+	// return adapter
 }
+
+// type Adapter struct {
+// 	Type 		string
+// 	Database    string
+// 	Username    string
+// 	Password    string
+// 	Host        string
+// 	Port        string
+// 	MaxIdleConnection int
+// 	MaxOpenConnection int 
+// }
+
+// func Initialize(config map[string]string) Adapter {
+
+// 	maxIdleConnection, err := strconv.Atoi(config["maxIdleConnection"])
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	maxOpenConnection, err := strconv.Atoi(config["maxOpenConnection"])
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	adapter := Adapter {
+// 		Type: 		 config["type"] ,
+// 		Database:	 config["database"],
+// 		Username: 	 config["username"],
+// 		Password:	 config["password"],
+// 		Host:		 config["host"],
+// 		Port:		 config["port"],
+// 		MaxIdleConnection: maxIdleConnection,
+// 		MaxOpenConnection: maxOpenConnection,
+// 	}
+// 	return adapter
+// }
 
 
 // Connect to a database with name
