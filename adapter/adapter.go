@@ -1,5 +1,5 @@
 package adapter
-
+// TODO: Dynamically set enviroment base on any value in database.yml ( currently, We only allow developement, Staging, Production, Test, LocalTest)
 import (
 	"fmt"
 	"database/sql"
@@ -15,10 +15,12 @@ type DB struct {
 	*Adapter
 }
 
-type Enviroment struct {
-    development Adapter `yaml:"development"`
-    staging 	Adapter `yaml:"staging"`
-    production  Adapter `yaml:"production"`
+type EnviromentConfig struct {
+    Development Adapter `yaml:"development"`
+    Staging 	Adapter `yaml:"staging"`
+    Production  Adapter `yaml:"production"`
+    Test 		Adapter `yaml:"test"`
+    LocalTest 	Adapter `yaml:"local_test"`
 }
 
 type Adapter struct {
@@ -32,78 +34,31 @@ type Adapter struct {
 	MaxOpenConnection int `yaml:"maxOpenConnection"`
 }
 
-func Initialize(path string) Enviroment {
+func Initialize(path string, env string) Adapter {
 	yamlFile, err := ioutil.ReadFile(path)
-	var en Enviroment
+	envConfig := EnviromentConfig{}
 	if err != nil {
         fmt.Printf("yamlFile.Get err   #%v ", err)
     }
-    err = yaml.Unmarshal(yamlFile, en)
+    err = yaml.Unmarshal(yamlFile, &envConfig)
     if err != nil {
-    	
         fmt.Printf("Unmarshal: %v", err)
     }
 
-    return en
-	// maxIdleConnection, err := strconv.Atoi(config["maxIdleConnection"])
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// maxOpenConnection, err := strconv.Atoi(config["maxOpenConnection"])
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// adapter := Adapter {
-	// 	Type: 		 config["type"] ,
-	// 	Database:	 config["database"],
-	// 	Username: 	 config["username"],
-	// 	Password:	 config["password"],
-	// 	Host:		 config["host"],
-	// 	Port:		 config["port"],
-	// 	MaxIdleConnection: maxIdleConnection,
-	// 	MaxOpenConnection: maxOpenConnection,
-	// }
-	// return adapter
+    switch env {
+	    case "development":
+	        return envConfig.Development
+	    case "staging":
+	        return envConfig.Staging
+	    case "production":
+	    	return envConfig.Production
+	    case "test":
+	    	return envConfig.Test
+	    case "local_test":
+	    	return envConfig.LocalTest
+	}
+	return envConfig.Development
 }
-
-// type Adapter struct {
-// 	Type 		string
-// 	Database    string
-// 	Username    string
-// 	Password    string
-// 	Host        string
-// 	Port        string
-// 	MaxIdleConnection int
-// 	MaxOpenConnection int 
-// }
-
-// func Initialize(config map[string]string) Adapter {
-
-// 	maxIdleConnection, err := strconv.Atoi(config["maxIdleConnection"])
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	maxOpenConnection, err := strconv.Atoi(config["maxOpenConnection"])
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	adapter := Adapter {
-// 		Type: 		 config["type"] ,
-// 		Database:	 config["database"],
-// 		Username: 	 config["username"],
-// 		Password:	 config["password"],
-// 		Host:		 config["host"],
-// 		Port:		 config["port"],
-// 		MaxIdleConnection: maxIdleConnection,
-// 		MaxOpenConnection: maxOpenConnection,
-// 	}
-// 	return adapter
-// }
-
 
 // Connect to a database with name
 func (adapter *Adapter) ConnectToDatabase() (dbObject *DB, err error) {
@@ -121,11 +76,8 @@ func (adapter *Adapter) ConnectToDatabase() (dbObject *DB, err error) {
 	db.SetMaxOpenConns(adapter.MaxOpenConnection)
 	err = db.Ping()
 	if err != nil {
-		red := color.New(color.FgRed).PrintfFunc()
-		red("%s\n", err)
 		return nil, err
 	}
-	color.Green("Connected to '%s' database at %s:%s\n", adapter.Database, adapter.Host, adapter.Port)
 	return &DB{db, adapter}, nil
 }
 
@@ -146,10 +98,10 @@ func (adapter *Adapter) ConnectToPostgres() (dbObject *DB, err error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(`Database connection opened.`)
 	return &DB{db, adapter}, nil
 }
 
+// The function name has spoken for itself 
 func (c *DB) Close() {
 	if c.DB == nil {
 		return
