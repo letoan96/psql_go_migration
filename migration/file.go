@@ -9,6 +9,7 @@ type Migrate struct {
 	Name string
 	Version string
 	Direction string
+	Path string
 }
 
 type MigrateList []*Migrate
@@ -27,7 +28,7 @@ func (migration *Migration) ReadMigrateFolder() (*MigrateList, error) {
 			if err != nil {
 				continue // ignore files that can't be parsed
 			}
-
+			m.Path = fmt.Sprintf("%s/%s", migration.Directory, file.Name())
 			migrateList = append(migrateList, m)
 		}
 	}

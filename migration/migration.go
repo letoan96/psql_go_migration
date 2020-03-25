@@ -46,7 +46,7 @@ func Generate(migration_name string, migrationFolderPath string) (*NewMigration,
    	var err error
 	for _, direction := range directions {
     	migrationFileLocation = fmt.Sprintf("%s/%s.%s.sql", migrationFolderPath, migrationFileName, direction)
-    	err = ioutil.WriteFile(migrationFileLocation, []byte("BEGIN\n-------PLACE YOUR STATEMENT INSIDE BEGIN-END BLOCK-------\n\nEND"), 0644)
+    	err = ioutil.WriteFile(migrationFileLocation, []byte(""), 0644)
 	    if err != nil {
 	        return nil,  err
 	    }
@@ -76,42 +76,82 @@ func (migration *Migration) Migrate() error {
 		return err
 	}
 
+	// Get all migrate in migrate folder 
 	migrateList, err := migration.ReadMigrateFolder()
 	if err != nil {
 		return err
 	}
 
-	err = migrateList.migrateUP()
+	
+	// Run it
+	err = migration.migrateUP(migrateList)
+	// err = migration.migrateDown(migrateList, 1)
+	if err != nil {
+		return err 
+	}
+	
+	return nil
+}
+
+func (migration *Migration) RollBack(step int) error {
+	// Get all migrate in migrate folder 
+	migrateList, err := migration.ReadMigrateFolder()
 	if err != nil {
 		return err
+	}
+
+	// Run it
+	fmt.Printf("*** Rolling back last %v  migration ***\n", step)
+	err = migration.migrateDown(migrateList, step)
+	if err != nil {
+		return err 
 	}
 	
 	return nil
 }
 
 // run the migrate
-func (migrate Migrate) run() {
-	fmt.Printf("%+v\n", migrate)
+func (migration *Migration) run(migrate *Migrate) error {
+	db := migration.DB
+	dat, _ := ioutil.ReadFile(migrate.Path)
+	// fmt.Printf("\nData: %s", dat)
+	statement := string(dat)
+	_, err := db.Exec(statement)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("== %s: done ======================================\n", migrate.Name)
+	return nil
 	// then write version to schema_migration
 }
 
 // Migrate all the way up
-func (migrateList *MigrateList) migrateUP() error {
+func (migration *Migration) migrateUP(migrateList *MigrateList) error {
 	currentVersion := migration.getCurrentVersion()
 	upList := MigrateList{} // migrations are going to migrate
-	for i, migrate := range *migrateList {
-    	if migrate.Version == currentVersion && migrate.Direction == "up" {
-    		j := i + 1
-        	upList = (*migrateList)[j:]
-        	break
+
+	if currentVersion == "-1" {
+		upList = *migrateList
+	} else {
+		for i, migrate := range *migrateList {
+	    	if migrate.Version == currentVersion && migrate.Direction == "up" {
+	    		j := i + 1
+	        	upList = (*migrateList)[j:]
+	        	break
+    		}
     	}
-    }
+	}
 
-
+	
 
     for _, migrate := range upList {
     	if migrate.Direction == "up" {
-    		migrate.run()  
+    		err := migration.run(migrate)
+    		if err != nil {
+    			return err
+    		}
+    		migration.appendMigrateVersion(migrate.Version)
     	}
 	}
 
@@ -119,8 +159,33 @@ func (migrateList *MigrateList) migrateUP() error {
 }
 
 // Migrate down from current version
-func (migrateList *MigrateList) migrateDown(step int) error {
-	// currentVersion := migration.getCurrentVersion()
+func (migration *Migration) migrateDown(migrateList *MigrateList, step int) error {
+	currentVersion := migration.getCurrentVersion()
+	downList := MigrateList{} // migrations are going to rollback
+	for i, migrate := range *migrateList {
+		j := i + 1
+    	if migrate.Version == currentVersion {
+        	downList = (*migrateList)[:j]
+        	break
+    	}
+    }
+    // iterate in reverse
+    for i := len(downList)-1; i >= 0; i-- {
+    	if step <= 0 {
+    		return nil
+    	}
+    	migrate := downList[i]
+   		// fmt.Println(s[i])
+   		if migrate.Direction == "down" {
+    		err := migration.run(migrate)
+    		if err != nil {
+    			return err
+    		}
+    		migration.deleteMigrateVersion(migrate.Version)
+    		step--
+    	}
+
+	}
     return nil
 }
 
@@ -183,4 +248,22 @@ func (migration *Migration) getCurrentVersion() string {
 		}
 	}
 	return version
+}
+
+func (migration *Migration) appendMigrateVersion(version string) {
+	db := migration.DB
+	statement := fmt.Sprintf("INSERT INTO schema_migrations (version) VALUES ('%s');", version)
+	_, err := db.Exec(statement)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (migration *Migration) deleteMigrateVersion(version string) {
+	db := migration.DB
+	statement := fmt.Sprintf("DELETE FROM schema_migrations WHERE version='%s';", version)
+	_, err := db.Exec(statement)
+	if err != nil {
+		panic(err)
+	}
 }
