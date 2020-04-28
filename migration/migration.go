@@ -10,6 +10,7 @@ import (
 	"github.com/letoan96/psql_go_migration/adapter"
 	"io/ioutil"
 	"database/sql"
+	"reflect"
 	// "io"
 )
 var (
@@ -81,7 +82,6 @@ func (migration *Migration) Migrate() error {
 	if err != nil {
 		return err
 	}
-
 	
 	// Run it
 	err = migration.migrateUP(migrateList)
@@ -128,22 +128,18 @@ func (migration *Migration) run(migrate *Migrate) error {
 
 // Migrate all the way up
 func (migration *Migration) migrateUP(migrateList *MigrateList) error {
-	currentVersion := migration.getCurrentVersion()
-	upList := MigrateList{} // migrations are going to migrate
+	migratedList := migration.getSchemaMigrations()
+	upList := MigrateList{} // migrations which are going to migrate
 
-	if currentVersion == "-1" {
+	if len(migratedList) == 0 {
 		upList = *migrateList
 	} else {
-		for i, migrate := range *migrateList {
-	    	if migrate.Version == currentVersion && migrate.Direction == "up" {
-	    		j := i + 1
-	        	upList = (*migrateList)[j:]
-	        	break
+		for _, migrate := range *migrateList {
+	    	if !itemExists(migratedList, migrate.Version) && migrate.Direction == "up" {
+	    		upList = append(upList, migrate)
     		}
     	}
 	}
-
-	
 
     for _, migrate := range upList {
     	if migrate.Direction == "up" {
@@ -220,7 +216,6 @@ func (migration *Migration) DropDatabase() error {
 	return nil
 }
 
-// The function name has spoken for itself 
 func (migration *Migration) doesDatabaseExist() bool {
 	db := migration.DB
 	statement := fmt.Sprintf("SELECT EXISTS(SELECT datname FROM pg_catalog.pg_database WHERE datname = '%s');", db.Database)
@@ -250,6 +245,29 @@ func (migration *Migration) getCurrentVersion() string {
 	return version
 }
 
+func (migration *Migration) getSchemaMigrations() []string{
+	list := []string{}
+	db := migration.DB
+	statement := fmt.Sprintf(`SELECT version FROM schema_migrations ORDER BY version DESC`)
+	rows, err := db.Query(statement)
+	if err != nil {
+		panic(err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var version string
+		err := rows.Scan(&version)
+		if err != nil {
+			panic(err)
+		}
+
+		list = append(list, version)
+	}
+	return list
+}
+
 func (migration *Migration) appendMigrateVersion(version string) {
 	db := migration.DB
 	statement := fmt.Sprintf("INSERT INTO schema_migrations (version) VALUES ('%s');", version)
@@ -266,4 +284,18 @@ func (migration *Migration) deleteMigrateVersion(version string) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func itemExists(arrayType interface{}, item interface{}) bool {
+	arr := reflect.ValueOf(arrayType)
+	if arr.Kind() != reflect.Slice {
+		panic("Invalid data-type")
+	}
+
+	for i := 0; i < arr.Len(); i++ {
+		if arr.Index(i).Interface() == item {
+			return true
+		}
+	}
+	return false
 }
