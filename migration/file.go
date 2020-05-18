@@ -48,10 +48,9 @@ func Parse(raw string) (*Migrate, error) {
 		versionstring := string(m[1])
 		return &Migrate{
 			Version:    string(versionstring),
-			Name: m[2],
+			Name: 		m[2],
 			Direction:  m[3],
 		}, nil
 	}
 	return nil, ErrParse
 }
-
