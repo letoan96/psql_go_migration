@@ -1,12 +1,12 @@
 package migration
 
 import (
+	"database/sql"
 	"fmt"
 	"io/ioutil"
-	"github.com/letoan96/psql_go_migration/adapter"
 )
 
-func Seed(db *adapter.DB, path string) error {
+func Seed(db *sql.DB, path string) error {
 	dat, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err)
@@ -19,6 +19,6 @@ func Seed(db *adapter.DB, path string) error {
 		return err
 	}
 	fmt.Println("========== Done ====================")
-	
+
 	return nil
 }

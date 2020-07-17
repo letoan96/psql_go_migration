@@ -2,55 +2,56 @@ package migration
 
 import (
 	"fmt"
-	"regexp"
 	"io/ioutil"
+	"regexp"
+
+	"github.com/fatih/color"
 )
-type Migrate struct {
-	Name string
-	Version string
+
+type MigrateFile struct {
+	Name      string
+	Version   string
 	Direction string
-	Path string
+	Path      string
 }
 
-type MigrateList []*Migrate
+type MigrateList []*MigrateFile
 
-func (migration *Migration) ReadMigrateFolder() (*MigrateList, error) {
+var (
+	Regex = regexp.MustCompile(`^([0-9]+)_(.*)\.(` + `down` + `|` + `up` + `)\.(.*)$`)
+)
+
+func (migration *Migration) ReadMigrateFolder() *MigrateList {
 	migrateList := MigrateList{}
-	
+
 	files, err := ioutil.ReadDir(migration.Directory) // scan directory
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	for _, file := range files {
 		if !file.IsDir() {
-			m, err := Parse(file.Name())
+			migrateFile, err := Parse(file.Name())
 			if err != nil {
+				color.Red(fmt.Sprintf(`Can not read file: '%s'`, file.Name()))
 				continue // ignore files that can't be parsed
 			}
-			m.Path = fmt.Sprintf("%s/%s", migration.Directory, file.Name())
-			migrateList = append(migrateList, m)
+			migrateFile.Path = fmt.Sprintf("%s/%s", migration.Directory, file.Name())
+			migrateList = append(migrateList, migrateFile)
 		}
 	}
 
-	return &migrateList, nil
+	return &migrateList
 }
 
-// Parse returns Migration for matching Regex pattern.
-var (
-	ErrParse = fmt.Errorf("Migrate file no match")
-	Regex = regexp.MustCompile(`^([0-9]+)_(.*)\.(` + `down` + `|` + `up` + `)\.(.*)$`)
-)
-
-func Parse(raw string) (*Migrate, error) {
+func Parse(raw string) (*MigrateFile, error) {
 	m := Regex.FindStringSubmatch(raw)
 	if len(m) == 5 {
-		versionstring := string(m[1])
-		return &Migrate{
-			Version:    string(versionstring),
-			Name: 		m[2],
-			Direction:  m[3],
+		return &MigrateFile{
+			Version:   string(m[1]),
+			Name:      m[2],
+			Direction: m[3],
 		}, nil
 	}
-	return nil, ErrParse
+	return nil, fmt.Errorf("Migrate file no match")
 }
