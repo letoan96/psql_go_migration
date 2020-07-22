@@ -231,8 +231,7 @@ func (migration *Migration) getPreviousVersion(step int) []string {
 		ORDER BY
 			version DESC
 		LIMIT
-			$1
-		OFFSET 1`, step)
+			$1`, step)
 	if err != nil {
 		panic(err)
 	}
