@@ -130,7 +130,10 @@ func (migration *Migration) migrateUP(migrateList *MigrateList) {
 	}
 
 	for _, migrate := range upList {
-		migration.runUp(migrate)
+		if migrate.Direction == "up" {
+			migration.runUp(migrate)
+		}
+
 	}
 }
 
