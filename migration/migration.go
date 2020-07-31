@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"reflect"
 	"strings"
 	"time"
@@ -106,11 +105,9 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 		if strings.Contains(s, "before_migrate:") {
 			a := strings.Split(s, "before_migrate:")
 			beforeTask = Unmarshal(a[1])
-			log.Printf("before: %v", beforeTask)
 		} else if strings.Contains(s, "after_migrate:") {
 			a := strings.Split(s, "after_migrate:")
 			afterTask = Unmarshal(a[1])
-			log.Printf("after: %v", afterTask)
 		} else {
 			statementBuffer.WriteString(s)
 		}
