@@ -4,13 +4,20 @@ package migration
 // TODO: lock database before run migration
 
 import (
+	"bufio"
+	"bytes"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/letoan96/psql_go_migration/task"
 	// "io"
 )
 
@@ -85,10 +92,32 @@ func (migration *Migration) RollBack(step int) {
 
 // run the migrate
 func (migration *Migration) runUp(migrate *MigrateFile) {
-	statement, err := ioutil.ReadFile(migrate.Path)
+	content, err := ioutil.ReadFile(migrate.Path)
 	if err != nil {
 		panic(err)
 	}
+
+	scanner := bufio.NewScanner(bytes.NewBuffer(content))
+	var statementBuffer bytes.Buffer
+	var beforeTask, afterTask []string
+
+	for scanner.Scan() {
+		s := scanner.Text()
+		if strings.Contains(s, "before_migrate:") {
+			a := strings.Split(s, "before_migrate:")
+			beforeTask = Unmarshal(a[1])
+			log.Printf("before: %v", beforeTask)
+		} else if strings.Contains(s, "after_migrate:") {
+			a := strings.Split(s, "after_migrate:")
+			afterTask = Unmarshal(a[1])
+			log.Printf("after: %v", afterTask)
+		} else {
+			statementBuffer.WriteString(s)
+		}
+	}
+
+	task.RunTask(beforeTask)
+	statement := statementBuffer.String()
 
 	trx, err := migration.DB.Begin()
 	if err != nil {
@@ -111,6 +140,7 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 		panic(err)
 	}
 
+	task.RunTask(afterTask)
 	fmt.Printf("== %s: done ======================================\n", migrate.Name)
 }
 
@@ -289,4 +319,13 @@ func itemExists(arrayType interface{}, item interface{}) bool {
 		}
 	}
 	return false
+}
+
+func Unmarshal(s string) []string {
+	var arr []string
+	err := json.Unmarshal([]byte(s), &arr)
+	if err != nil {
+		panic(errors.New("Can't not unmarshal task list in migration"))
+	}
+	return arr
 }
