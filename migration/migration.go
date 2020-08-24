@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"reflect"
 	"strings"
 	"time"
@@ -61,6 +62,7 @@ func Generate(migrationName, folderPath string) {
 }
 
 func (migration *Migration) Migrate() {
+	defer timeTrack(time.Now(), "Migration")
 	// Will create table schema_migrations
 	_, err := migration.DB.Exec(`
 		CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -72,7 +74,7 @@ func (migration *Migration) Migrate() {
 	}
 
 	// Get all migrate in migrate folder
-	migrateList := migration.ReadMigrateFolder()
+	migrateList := migration.readMigrateFolder()
 	// Run it
 	migration.migrateUP(migrateList)
 }
@@ -82,7 +84,7 @@ func (migration *Migration) RollBack(step int) {
 		return
 	}
 
-	migrateList := migration.ReadMigrateFolder() // Get all migrate in migrate folder
+	migrateList := migration.readMigrateFolder() // Get all migrate in migrate folder
 	fmt.Printf("*** Rolling back last %v  migration ***\n", step)
 	migration.migrateDown(migrateList, step)
 }
@@ -102,10 +104,10 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 		s := scanner.Text()
 		if strings.Contains(s, "before_migrate:") {
 			a := strings.Split(s, "before_migrate:")
-			beforeTask = Unmarshal(a[1])
+			beforeTask = unmarshal(a[1])
 		} else if strings.Contains(s, "after_migrate:") {
 			a := strings.Split(s, "after_migrate:")
-			afterTask = Unmarshal(a[1])
+			afterTask = unmarshal(a[1])
 		} else {
 			statementBuffer.WriteString(s)
 			statementBuffer.WriteString(" ")
@@ -141,14 +143,15 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 }
 
 func (migration *Migration) migrateUP(migrateList *MigrateList) {
-	migratedList := migration.getSchemaMigrations()
+	migratedMap := migration.getSchemaMigrations()
 	upList := MigrateList{} // migrations which are going to migrate
 
-	if len(migratedList) == 0 {
+	if len(migratedMap) == 0 {
 		upList = *migrateList
 	} else {
 		for _, migrate := range *migrateList {
-			if !itemExists(migratedList, migrate.Version) && migrate.Direction == "up" {
+			_, ok := migratedMap[migrate.Version]
+			if ok && migrate.Direction == "up" {
 				upList = append(upList, migrate)
 			}
 		}
@@ -163,11 +166,12 @@ func (migration *Migration) migrateUP(migrateList *MigrateList) {
 
 // Migrate down from current version
 func (migration *Migration) migrateDown(migrateList *MigrateList, step int) {
-	downVersions := migration.getPreviousVersion(step)
+	downMap := migration.getPreviousVersion(step)
 	downList := MigrateList{} // migrations are going to rollback
 
 	for _, migrate := range *migrateList {
-		if itemExists(downVersions, migrate.Version) && migrate.Direction == "down" {
+		_, ok := downMap[migrate.Version]
+		if ok && migrate.Direction == "down" {
 			downList = append(downList, migrate)
 		}
 	}
@@ -223,7 +227,7 @@ func (migration *Migration) getCurrentVersion() string {
 	return version
 }
 
-func (migration *Migration) getSchemaMigrations() []string {
+func (migration *Migration) getSchemaMigrations() (migationMap map[string]int) {
 	rows, err := migration.DB.Query(`
 		SELECT 
 			version
@@ -236,7 +240,6 @@ func (migration *Migration) getSchemaMigrations() []string {
 	}
 	defer rows.Close()
 
-	list := []string{}
 	for rows.Next() {
 		var version string
 		err := rows.Scan(&version)
@@ -244,12 +247,13 @@ func (migration *Migration) getSchemaMigrations() []string {
 			panic(err)
 		}
 
-		list = append(list, version)
+		migationMap[version] = 1
 	}
-	return list
+
+	return migationMap
 }
 
-func (migration *Migration) getPreviousVersion(step int) []string {
+func (migration *Migration) getPreviousVersion(step int) (migationMap map[string]int) {
 	rows, err := migration.DB.Query(`
 		SELECT 
 			version
@@ -263,7 +267,7 @@ func (migration *Migration) getPreviousVersion(step int) []string {
 		panic(err)
 	}
 	defer rows.Close()
-	list := []string{}
+
 	for rows.Next() {
 		var version string
 		err := rows.Scan(&version)
@@ -271,9 +275,10 @@ func (migration *Migration) getPreviousVersion(step int) []string {
 			panic(err)
 		}
 
-		list = append(list, version)
+		migationMap[version] = 1
 	}
-	return list
+
+	return migationMap
 }
 
 func appendMigrateVersion(trx *sql.Tx, version string) error {
@@ -315,11 +320,16 @@ func itemExists(arrayType interface{}, item interface{}) bool {
 	return false
 }
 
-func Unmarshal(s string) []string {
+func unmarshal(s string) []string {
 	var arr []string
 	err := json.Unmarshal([]byte(s), &arr)
 	if err != nil {
 		panic(errors.New("Can't not unmarshal task list in migration"))
 	}
 	return arr
+}
+
+func timeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	log.Printf("%s took %s", name, elapsed)
 }

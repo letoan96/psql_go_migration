@@ -21,10 +21,10 @@ var (
 	Regex = regexp.MustCompile(`^([0-9]+)_(.*)\.(` + `down` + `|` + `up` + `)\.(.*)$`)
 )
 
-func (migration *Migration) ReadMigrateFolder() *MigrateList {
+func (migration *Migration) readMigrateFolder() *MigrateList {
 	migrateList := MigrateList{}
 
-	files, err := ioutil.ReadDir(migration.Directory) // scan directory
+	files, err := ioutil.ReadDir(migration.Directory)
 	if err != nil {
 		panic(err)
 	}
@@ -53,5 +53,6 @@ func Parse(raw string) (*MigrateFile, error) {
 			Direction: m[3],
 		}, nil
 	}
+
 	return nil, fmt.Errorf("Migrate file no match")
 }
