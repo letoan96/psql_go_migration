@@ -123,14 +123,14 @@ func (c *Connection) CreatDatabaseIfNotExists() error {
 	return nil
 }
 
-// The function name has spoken for itself
 func (c *Connection) DropDatabase() error {
-	if c.doesDatabaseExist() == true {
+	if c.doesDatabaseExist() {
 		statement := fmt.Sprintf("DROP DATABASE %s;", c.Database)
 		_, err := c.DB.Exec(statement)
 		if err != nil {
 			return err
 		}
+
 	} else {
 		return errors.New(fmt.Sprintf("Database '%s' does not exists", c.Database))
 	}

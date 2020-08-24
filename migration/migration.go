@@ -1,6 +1,5 @@
 package migration
 
-// TODO: Check connection before drop database
 // TODO: lock database before run migration
 
 import (
@@ -17,7 +16,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/letoan96/psql_go_migration/task"
-	// "io"
 )
 
 var (
@@ -110,11 +108,11 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 			afterTask = Unmarshal(a[1])
 		} else {
 			statementBuffer.WriteString(s)
+			statementBuffer.WriteString(" ")
 		}
 	}
 
 	task.RunTask(beforeTask)
-	statement := statementBuffer.String()
 
 	trx, err := migration.DB.Begin()
 	if err != nil {
@@ -122,6 +120,7 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 	}
 	defer trx.Rollback()
 
+	statement := statementBuffer.String()
 	_, err = trx.Exec(string(statement))
 	if err != nil {
 		panic(err)
@@ -141,7 +140,6 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 	fmt.Printf("== %s: done ======================================\n", migrate.Name)
 }
 
-// Migrate all the way up
 func (migration *Migration) migrateUP(migrateList *MigrateList) {
 	migratedList := migration.getSchemaMigrations()
 	upList := MigrateList{} // migrations which are going to migrate
@@ -160,7 +158,6 @@ func (migration *Migration) migrateUP(migrateList *MigrateList) {
 		if migrate.Direction == "up" {
 			migration.runUp(migrate)
 		}
-
 	}
 }
 
