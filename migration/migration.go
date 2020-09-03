@@ -227,7 +227,8 @@ func (migration *Migration) getCurrentVersion() string {
 	return version
 }
 
-func (migration *Migration) getSchemaMigrations() (migationMap map[string]int) {
+func (migration *Migration) getSchemaMigrations() map[string]int {
+	migationMap := map[string]int{}
 	rows, err := migration.DB.Query(`
 		SELECT 
 			version
@@ -253,7 +254,8 @@ func (migration *Migration) getSchemaMigrations() (migationMap map[string]int) {
 	return migationMap
 }
 
-func (migration *Migration) getPreviousVersion(step int) (migationMap map[string]int) {
+func (migration *Migration) getPreviousVersion(step int) map[string]int {
+	migationMap := map[string]int{}
 	rows, err := migration.DB.Query(`
 		SELECT 
 			version
