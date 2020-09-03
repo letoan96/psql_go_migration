@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"io/ioutil"
+
 	"github.com/fatih/color"
 	_ "github.com/lib/pq"
-
-	"io/ioutil"
 
 	"gopkg.in/yaml.v2"
 )
@@ -46,6 +46,7 @@ func Initialize(path string, env string) *Adapter {
 	if !found {
 		panic(errors.New(fmt.Sprintf(" ========== Can not read configurations of '%s' ᕙ(⇀‸↼‶)ᕗ =========", env)))
 	}
+
 	return adapter
 }
 
