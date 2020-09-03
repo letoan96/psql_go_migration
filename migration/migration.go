@@ -123,6 +123,7 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 	defer trx.Rollback()
 
 	statement := statementBuffer.String()
+	fmt.Println("======================", statement)
 	_, err = trx.Exec(string(statement))
 	if err != nil {
 		panic(err)
@@ -145,13 +146,12 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 func (migration *Migration) migrateUP(migrateList *MigrateList) {
 	migratedMap := migration.getSchemaMigrations()
 	upList := MigrateList{} // migrations which are going to migrate
-
 	if len(migratedMap) == 0 {
 		upList = *migrateList
 	} else {
 		for _, migrate := range *migrateList {
 			_, ok := migratedMap[migrate.Version]
-			if ok && migrate.Direction == "up" {
+			if !ok && migrate.Direction == "up" {
 				upList = append(upList, migrate)
 			}
 		}
