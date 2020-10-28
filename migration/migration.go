@@ -26,6 +26,7 @@ var (
 type Migration struct {
 	*sql.DB
 	Directory string
+	taskCMD   string
 }
 
 type NewMigration struct {
@@ -33,10 +34,16 @@ type NewMigration struct {
 	Down string
 }
 
-func Initialize(db *sql.DB, folderPath string) *Migration {
+func Initialize(db *sql.DB, folderPath string, cmd ...string) *Migration {
+	taskCMD := ""
+	if len(cmd) > 0 {
+		taskCMD = cmd[0]
+	}
+
 	migration := &Migration{
 		DB:        db,
 		Directory: folderPath,
+		taskCMD:   taskCMD,
 	}
 	return migration
 }
@@ -114,7 +121,7 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 		}
 	}
 
-	task.RunTask(beforeTask)
+	task.RunTask(beforeTask, migration.taskCMD)
 
 	trx, err := migration.DB.Begin()
 	if err != nil {
@@ -139,7 +146,7 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 		panic(err)
 	}
 
-	task.RunTask(afterTask)
+	task.RunTask(afterTask, migration.taskCMD)
 	fmt.Printf("== %s: done ======================================\n", migrate.Name)
 }
 

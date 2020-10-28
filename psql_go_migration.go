@@ -2,7 +2,6 @@ package psql_go_migration
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 
 	"github.com/fatih/color"
@@ -11,36 +10,18 @@ import (
 )
 
 // configFilePath -> path to db config file (database.yaml) file
+
 func ConnectDB(configFilePath string, enviroment string) *sql.DB {
 	adapterInstance := adapter.Initialize(configFilePath, enviroment)
-	// connection.DB.Exec(`SET TIMEZONE='Asia/Bangkok';`)
 	color.Red("========================   Try `lottery_tools -db migrate` when encounter weird errors ======================")
 	connection := connect(adapterInstance)
 	return connection.DB
-}
-
-func connect(a *adapter.Adapter) *adapter.Connection {
-	connection := a.ConnectToDatabase()
-	connection.DB.Exec(`SET TIMEZONE='Asia/Bangkok';`)
-	return connection
 }
 
 func CreateDb(configFilePath string, enviroment string) {
 	adapterInstance := adapter.Initialize(configFilePath, enviroment)
 	psql := adapterInstance.ConnectToPostgres()
 	create(psql)
-}
-
-func create(connection *adapter.Connection) {
-	defer connection.Close()
-	err := connection.CreatDatabaseIfNotExists()
-	if err != nil {
-		red := color.New(color.FgRed).PrintfFunc()
-		red("%s\n", err)
-		return
-	}
-
-	color.Green(`Created '%s' database.`, connection.Database)
 }
 
 func DropDb(configFilePath string, enviroment string) {
@@ -58,8 +39,8 @@ func DropDb(configFilePath string, enviroment string) {
 	color.Yellow(`Database '%s' droped.`, psql.Database)
 }
 
-func NewMigration(name *string, migrationDirectoryPath string) {
-	migration.Generate(*name, migrationDirectoryPath)
+func NewMigration(name string, migrationDirectoryPath string) {
+	migration.Generate(name, migrationDirectoryPath)
 }
 
 func MigrateDb(configFilePath string, migrationDirectoryPath string, enviroment string) {
@@ -70,16 +51,13 @@ func MigrateDb(configFilePath string, migrationDirectoryPath string, enviroment 
 	migrate(connection.DB, migrationDirectoryPath)
 }
 
-func migrate(db *sql.DB, migrationPath string) {
-	migrationInstance := migration.Initialize(db, migrationPath)
-	migrationInstance.Migrate()
-}
-
 func Rollback(configFilePath string, migrationDirectoryPath string, enviroment string, step int) {
 	adapterInstance := adapter.Initialize(configFilePath, enviroment)
 	connection := adapterInstance.ConnectToDatabase()
-	migrationInstance := migration.Initialize(connection.DB, migrationDirectoryPath)
-	migrationInstance.RollBack(step)
+	rollback(migrationDirectoryPath, connection.DB, step)
+	//migrationInstance := migration.Initialize(connection.DB, migrationDirectoryPath)
+	//migrationInstance.RollBack(step)
+
 }
 
 // ------------------------------------------------------------------- For mutiple databases -------------------
@@ -100,7 +78,6 @@ func ConnectMutipleDB(configFilePath string, enviroment string, dbName []string)
 
 func MigrateSingleDB(configFilePath string, migrationDirectoryPath string, enviroment string, dbName string) {
 	fmt.Println(fmt.Sprintf(`>> Migrate '%s' '%s' database`, enviroment, dbName))
-	panic(errors.New("asdasdas"))
 	adapterInstance := adapter.InitializeAdapter(configFilePath, enviroment, dbName)
 	connection := adapterInstance.ConnectToDatabase()
 
@@ -113,28 +90,58 @@ func CreateSingleDB(configFilePath string, enviroment string, dbName string) {
 	create(connection)
 }
 
-// var seedName = flag.String("seedname", "", "Data seed name")
+func RollbackSingleDB(configFilePath string, migrationDirectoryPath string, enviroment string, dbName string, step int) {
+	adapterInstance := adapter.InitializeAdapter(configFilePath, enviroment, dbName)
+	connection := adapterInstance.ConnectToDatabase()
 
-// func Seed() {
-// 	var env *ENV
-// 	renv.ParseCmd(&env)
+	rollback(migrationDirectoryPath, connection.DB, step)
+}
 
-// 	adapterInstance := adapter.Initialize(env.DatabaseConfigFilePath, env.Enviroment)
-// 	connection := adapterInstance.ConnectToDatabase()
+func DropSingleDB(configFilePath string, enviroment string, dbName string) {
+	adapterInstance := adapter.InitializeAdapter(configFilePath, enviroment, dbName)
+	connection := adapterInstance.ConnectToPostgres()
+	drop(connection)
 
-// 	var seedFile string
-// 	if *seedName == "" {
-// 		seedFile = fmt.Sprintf("%s/seed.sql", env.DatabaseSeedFilePath)
-// 	} else {
-// 		seedFile = fmt.Sprintf("%s/%s.sql", env.DatabaseSeedFilePath, *seedName)
-// 	}
+}
 
-// 	fmt.Printf("Running seed file: %s\n", seedFile)
+//-----------------------------------------
+func connect(a *adapter.Adapter) *adapter.Connection {
+	connection := a.ConnectToDatabase()
+	connection.DB.Exec(`SET TIMEZONE='Asia/Bangkok';`)
+	return connection
+}
 
-// 	err := migration.Seed(connection.DB, seedFile)
-// 	if err != nil {
-// 		red := color.New(color.FgRed).PrintfFunc()
-// 		red("%s\n", err)
-// 		panic(err)
-// 	}
-// }
+func create(connection *adapter.Connection) {
+	defer connection.Close()
+	err := connection.CreatDatabaseIfNotExists()
+	if err != nil {
+		red := color.New(color.FgRed).PrintfFunc()
+		red("%s\n", err)
+		return
+	}
+
+	color.Green(`Created '%s' database.`, connection.Database)
+}
+
+func migrate(db *sql.DB, migrationPath string) {
+	migrationInstance := migration.Initialize(db, migrationPath)
+	migrationInstance.Migrate()
+}
+
+func rollback(migrationDirectoryPath string, db *sql.DB, step int) {
+	migrationInstance := migration.Initialize(db, migrationDirectoryPath)
+	migrationInstance.RollBack(step)
+}
+
+func drop(connection *adapter.Connection) {
+	defer connection.Close()
+
+	err := connection.DropDatabase()
+	if err != nil {
+		red := color.New(color.FgRed).PrintfFunc()
+		red("%s\n", err)
+		return
+	}
+
+	color.Yellow(`Database '%s' droped.`, connection.Database)
+}

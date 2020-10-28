@@ -19,6 +19,7 @@ type Connection struct {
 }
 
 type Adapter struct {
+	TaskCMD           string `yaml:"taskCommand"`
 	Type              string `yaml:"type"`
 	Database          string `yaml:"database"`
 	Username          string `yaml:"username"`
@@ -37,7 +38,6 @@ func Initialize(path string, env string) *Adapter {
 
 	envConfig := make(map[string]*Adapter)
 	err = yaml.Unmarshal(yamlFile, envConfig)
-
 	if err != nil {
 		fmt.Printf("Unmarshal: %v", err)
 	}
@@ -113,12 +113,11 @@ func (c *Connection) Close() {
 func (c *Connection) CreatDatabaseIfNotExists() error {
 	if c.doesDatabaseExist() == true {
 		return errors.New(fmt.Sprintf("Database '%s' already exists.", c.Database))
-	} else {
-		statement := fmt.Sprintf("CREATE DATABASE %s;", c.Database)
-		_, err := c.DB.Exec(statement)
-		if err != nil {
-			return err
-		}
+	}
+
+	_, err := c.DB.Exec(fmt.Sprintf("CREATE DATABASE %s;", c.Database))
+	if err != nil {
+		return err
 	}
 
 	return nil
