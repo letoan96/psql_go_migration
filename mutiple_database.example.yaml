@@ -1,0 +1,59 @@
+development:
+  primary:
+    type: "postgres"
+    database: "firstdb_development"
+    username: "developer"
+    password: "developer"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5432"
+  lottery:
+    type: "postgres"
+    database: "seconddb_development"
+    username: "developer"
+    password: "developer"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5432"
+  pools:
+    type: "postgres"
+    database: "thirddb_development"
+    username: "developer"
+    password: "developer"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5432"
+
+test:
+  primary:
+    type: "postgres"
+    database: "firstdb_test"
+    username: "developer"
+    password: "developer"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5432"
+  lottery:
+    type: "postgres"
+    database: "seconddb_test"
+    username: "developer"
+    password: "developer"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5432"
+  pools:
+    type: "postgres"
+    database: "thirddb_test"
+    username: "developer"
+    password: "developer"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5432"
+
+

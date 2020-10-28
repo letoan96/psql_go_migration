@@ -10,6 +10,10 @@ import (
 )
 
 // configFilePath -> path to db config file (database.yaml) file
+// enviroment -> development or test or staging ?
+// migrationDirectoryPath -> folder contains migration files
+// step -> how many migrations will be rolled back?
+//
 
 func ConnectDB(configFilePath string, enviroment string) *sql.DB {
 	adapterInstance := adapter.Initialize(configFilePath, enviroment)
@@ -61,7 +65,7 @@ func Rollback(configFilePath string, migrationDirectoryPath string, enviroment s
 }
 
 // ------------------------------------------------------------------- For mutiple databases -------------------
-
+// These functions for mutiple database
 type Databases map[string]*sql.DB
 
 func ConnectMutipleDB(configFilePath string, enviroment string, dbName []string) (databases Databases) {

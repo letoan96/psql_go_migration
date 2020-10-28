@@ -1,0 +1,43 @@
+development:
+  taskCommand: "my_app_name -cmd"
+  type: "postgres"
+  database: "app_db_development"
+  username: "superman"
+  password: "superman"
+  maxIdleConnection: 80
+  maxOpenConnection: 40
+  host: "127.0.0.1"
+  port: "5432"
+
+test:
+  taskCommand: "my_app_name -cmd"
+  type: "postgres"
+  database: "app_db_test"
+  username: "superman"
+  password: "superman"
+  maxIdleConnection: 80
+  maxOpenConnection: 40
+  host: "127.0.0.1"
+  port: "5432"
+
+staging:
+  taskCommand: "my_app_name -cmd"
+  type: "postgres"
+  database: "app_db_staging"
+  username: "superman"
+  password: "superman"
+  maxIdleConnection: 80
+  maxOpenConnection: 40
+  host: "127.0.0.1"
+  port: "5432"
+
+production:
+  taskCommand: "my_app_name -cmd"
+  type: "postgres"
+  database: "app_db_production"
+  username: "superman"
+  password: "superman"
+  maxIdleConnection: 80
+  maxOpenConnection: 40
+  host: "127.0.0.1"
+  port: "5432"
