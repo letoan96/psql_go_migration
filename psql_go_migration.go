@@ -52,7 +52,7 @@ func MigrateDb(configFilePath string, migrationDirectoryPath string, enviroment 
 	adapterInstance := adapter.Initialize(configFilePath, enviroment)
 	connection := adapterInstance.ConnectToDatabase()
 
-	migrate(connection.DB, migrationDirectoryPath)
+	migrate(connection.DB, migrationDirectoryPath, adapterInstance.TaskCMD)
 }
 
 func Rollback(configFilePath string, migrationDirectoryPath string, enviroment string, step int) {
@@ -85,7 +85,7 @@ func MigrateSingleDB(configFilePath string, migrationDirectoryPath string, envir
 	adapterInstance := adapter.InitializeAdapter(configFilePath, enviroment, dbName)
 	connection := adapterInstance.ConnectToDatabase()
 
-	migrate(connection.DB, migrationDirectoryPath)
+	migrate(connection.DB, migrationDirectoryPath, adapterInstance.TaskCMD)
 }
 
 func CreateSingleDB(configFilePath string, enviroment string, dbName string) {
@@ -127,8 +127,8 @@ func create(connection *adapter.Connection) {
 	color.Green(`Created '%s' database.`, connection.Database)
 }
 
-func migrate(db *sql.DB, migrationPath string) {
-	migrationInstance := migration.Initialize(db, migrationPath)
+func migrate(db *sql.DB, migrationPath string, taskCMD string) {
+	migrationInstance := migration.Initialize(db, migrationPath, taskCMD)
 	migrationInstance.Migrate()
 }
 
