@@ -1,0 +1,32 @@
+development:
+  taskCommand: "development_database -cmd"
+  type: "postgres"
+  database: "development_database_test"
+  username: "dever"
+  password: "dever"
+  maxIdleConnection: 80
+  maxOpenConnection: 40
+  host: "127.0.0.1"
+  port: "5433"
+
+test:
+  taskCommand: "development_database -cmd"
+  type: "postgres"
+  database: "test_database_test"
+  username: "dever"
+  password: "dever"
+  maxIdleConnection: 80
+  maxOpenConnection: 40
+  host: "127.0.0.1"
+  port: "5433"
+
+staging:
+  taskCommand: "development_database -cmd"
+  type: "postgres"
+  database: "staging_database_test"
+  username: "dever"
+  password: "dever"
+  maxIdleConnection: 80
+  maxOpenConnection: 40
+  host: "127.0.0.1"
+  port: "5433"

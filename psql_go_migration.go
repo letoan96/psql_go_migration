@@ -2,7 +2,6 @@ package psql_go_migration
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/fatih/color"
 	"github.com/letoan96/psql_go_migration/adapter"
@@ -10,142 +9,107 @@ import (
 )
 
 // configFilePath -> path to db config file (database.yaml) file
-// enviroment -> development or test or staging ?
-// migrationDirectoryPath -> folder contains migration files
+// migrationDirectoryPath -> folder contains migrate files
 // step -> how many migrations will be rolled back?
-//
+var red = color.New(color.FgRed).PrintfFunc()
+var green = color.New(color.FgGreen).PrintfFunc()
+var yellow = color.New(color.FgYellow).PrintfFunc()
 
-func ConnectDB(configFilePath string, enviroment string) *sql.DB {
-	adapterInstance := adapter.Initialize(configFilePath, enviroment)
-	color.Red("========================   Try `lottery_tools -db migrate` when encounter weird errors ======================")
-	connection := connect(adapterInstance)
-	return connection.DB
+func ConnectDB(configFilePath string, environment string) *sql.DB {
+	adapter := adapter.Initialize(configFilePath, environment)
+	conn := adapter.ConnectToDatabase()
+	return conn.DB
 }
 
-func CreateDb(configFilePath string, enviroment string) {
-	adapterInstance := adapter.Initialize(configFilePath, enviroment)
-	psql := adapterInstance.ConnectToPostgres()
-	create(psql)
+func CreateDb(configFilePath string, environment string) error {
+	adapter := adapter.Initialize(configFilePath, environment)
+	conn := adapter.ConnectToPostgres()
+	return create(conn)
 }
 
-func DropDb(configFilePath string, enviroment string) {
-	adapterInstance := adapter.Initialize(configFilePath, enviroment)
-	psql := adapterInstance.ConnectToPostgres()
-	defer psql.Close()
+func DropDb(configFilePath string, environment string) error {
+	adapter := adapter.Initialize(configFilePath, environment)
+	conn := adapter.ConnectToPostgres()
+	defer conn.Close()
+	return drop(conn)
+}
 
-	err := psql.DropDatabase()
-	if err != nil {
-		red := color.New(color.FgRed).PrintfFunc()
-		red("%s\n", err)
-		return
+func NewMigration(name string, migrationDirectoryPath string) (string, string) {
+	return migration.Generate(name, migrationDirectoryPath)
+}
+
+func Migrate(configFilePath string, migrationDirectoryPath string, environment string) {
+	green(">> Migrate '%s' database. \n", environment)
+	adapter := adapter.Initialize(configFilePath, environment)
+	conn := adapter.ConnectToDatabase()
+	defer conn.Close()
+	migrate(conn.DB, migrationDirectoryPath, adapter.TaskCMD)
+}
+
+func Rollback(configFilePath string, migrationDirectoryPath string, environment string, step int) {
+	adapter := adapter.Initialize(configFilePath, environment)
+	conn := adapter.ConnectToDatabase()
+	defer conn.Close()
+	rollback(migrationDirectoryPath, conn.DB, step)
+}
+
+// Databases --------------------------- For multiple databases -------------------
+
+func ConnectMultipleDB(configFilePath string, environment string, dbName []string) (databases map[string]*sql.DB) {
+	adapterMap := adapter.InitializeMultipleAdapter(configFilePath, environment, dbName)
+	for name, adapter := range adapterMap {
+		conn := adapter.ConnectToDatabase()
+		databases[name] = conn.DB
 	}
-
-	color.Yellow(`Database '%s' droped.`, psql.Database)
+	return
 }
 
-func NewMigration(name string, migrationDirectoryPath string) {
-	migration.Generate(name, migrationDirectoryPath)
+func MigrateSingleDB(configFilePath string, migrationDirectoryPath string, environment string, dbName string) {
+	green(">> Migrate '%s' database.", environment)
+	adapter := adapter.InitializeMultipleAdapter(configFilePath, environment, []string{dbName})[dbName]
+	conn := adapter.ConnectToDatabase()
+
+	migrate(conn.DB, migrationDirectoryPath, adapter.TaskCMD)
 }
 
-func MigrateDb(configFilePath string, migrationDirectoryPath string, enviroment string) {
-	fmt.Println(">> Migrate ", enviroment, "database")
-	adapterInstance := adapter.Initialize(configFilePath, enviroment)
-	connection := adapterInstance.ConnectToDatabase()
-
-	migrate(connection.DB, migrationDirectoryPath, adapterInstance.TaskCMD)
+func CreateSingleDB(configFilePath string, environment string, dbName string) {
+	adapter := adapter.InitializeMultipleAdapter(configFilePath, environment, []string{dbName})[dbName]
+	conn := adapter.ConnectToDatabase()
+	create(conn)
 }
 
-func Rollback(configFilePath string, migrationDirectoryPath string, enviroment string, step int) {
-	adapterInstance := adapter.Initialize(configFilePath, enviroment)
-	connection := adapterInstance.ConnectToDatabase()
-	rollback(migrationDirectoryPath, connection.DB, step)
-	//migrationInstance := migration.Initialize(connection.DB, migrationDirectoryPath)
-	//migrationInstance.RollBack(step)
+func RollbackSingleDB(configFilePath string, migrationDirectoryPath string, environment string, dbName string, step int) {
+	adapter := adapter.InitializeMultipleAdapter(configFilePath, environment, []string{dbName})[dbName]
+	conn := adapter.ConnectToDatabase()
 
+	rollback(migrationDirectoryPath, conn.DB, step)
 }
 
-// ------------------------------------------------------------------- For mutiple databases -------------------
-// These functions for mutiple database
-type Databases map[string]*sql.DB
+func DropSingleDB(configFilePath string, environment string, dbName string) {
+	adapter := adapter.InitializeMultipleAdapter(configFilePath, environment, []string{dbName})[dbName]
+	conn := adapter.ConnectToPostgres()
+	defer conn.Close()
 
-func ConnectMutipleDB(configFilePath string, enviroment string, dbName []string) (databases Databases) {
-	adapters := adapter.InitializeMutipleAdapter(configFilePath, enviroment, dbName)
-
-	for i, a := range adapters {
-		connection := connect(a)
-		name := dbName[i]
-		databases[name] = connection.DB
-	}
-
-	return databases
-}
-
-func MigrateSingleDB(configFilePath string, migrationDirectoryPath string, enviroment string, dbName string) {
-	fmt.Println(fmt.Sprintf(`>> Migrate '%s' '%s' database`, enviroment, dbName))
-	adapterInstance := adapter.InitializeAdapter(configFilePath, enviroment, dbName)
-	connection := adapterInstance.ConnectToDatabase()
-
-	migrate(connection.DB, migrationDirectoryPath, adapterInstance.TaskCMD)
-}
-
-func CreateSingleDB(configFilePath string, enviroment string, dbName string) {
-	adapter := adapter.InitializeAdapter(configFilePath, enviroment, dbName)
-	connection := connect(adapter)
-	create(connection)
-}
-
-func RollbackSingleDB(configFilePath string, migrationDirectoryPath string, enviroment string, dbName string, step int) {
-	adapterInstance := adapter.InitializeAdapter(configFilePath, enviroment, dbName)
-	connection := adapterInstance.ConnectToDatabase()
-
-	rollback(migrationDirectoryPath, connection.DB, step)
-}
-
-func DropSingleDB(configFilePath string, enviroment string, dbName string) {
-	adapterInstance := adapter.InitializeAdapter(configFilePath, enviroment, dbName)
-	connection := adapterInstance.ConnectToPostgres()
-	drop(connection)
-
+	drop(conn)
 }
 
 //-----------------------------------------
-func connect(a *adapter.Adapter) *adapter.Connection {
-	connection := a.ConnectToDatabase()
-	connection.DB.Exec(`SET TIMEZONE='Asia/Bangkok';`)
-	return connection
-}
-
-func create(connection *adapter.Connection) {
+func create(connection *adapter.Connection) error {
 	defer connection.Close()
-	err := connection.CreatDatabaseIfNotExists()
-	if err != nil {
-		red := color.New(color.FgRed).PrintfFunc()
-		red("%s\n", err)
-		return
-	}
+	return connection.CreateDatabaseIfNotExists()
 
-	color.Green(`Created '%s' database.`, connection.Database)
 }
 
 func migrate(db *sql.DB, migrationPath string, taskCMD string) {
-	migrationInstance := migration.Initialize(db, migrationPath, taskCMD)
-	migrationInstance.Migrate()
+	migration := migration.Initialize(db, migrationPath, taskCMD)
+	migration.Migrate()
 }
 
 func rollback(migrationDirectoryPath string, db *sql.DB, step int) {
-	migrationInstance := migration.Initialize(db, migrationDirectoryPath)
-	migrationInstance.RollBack(step)
+	migration := migration.Initialize(db, migrationDirectoryPath)
+	migration.RollBack(step)
 }
 
-func drop(connection *adapter.Connection) {
-	defer connection.Close()
-
-	err := connection.DropDatabase()
-	if err != nil {
-		red := color.New(color.FgRed).PrintfFunc()
-		red("%s\n", err)
-		return
-	}
-
-	color.Yellow(`Database '%s' droped.`, connection.Database)
+func drop(conn *adapter.Connection) error {
+	return conn.DropDatabase()
 }

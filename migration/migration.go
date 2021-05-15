@@ -1,6 +1,6 @@
 package migration
 
-// TODO: lock database before run migration
+// TODO: lock database before run migrate
 
 import (
 	"bufio"
@@ -11,16 +11,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"reflect"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/letoan96/psql_go_migration/task"
-)
-
-var (
-	directions = [2]string{"up", "down"}
 )
 
 type Migration struct {
@@ -48,23 +43,25 @@ func Initialize(db *sql.DB, folderPath string, cmd ...string) *Migration {
 	return migration
 }
 
-func Generate(migrationName, folderPath string) {
+func Generate(migrationName, folderPath string) (up, down string) {
 	t := time.Now()
-
 	fileName := fmt.Sprintf("%d%02d%02d%02d%02d%02d_%s",
 		t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), migrationName)
 
-	for _, direction := range directions {
+	for _, direction := range [2]string{"up", "down"} {
 		fileLocation := fmt.Sprintf("%s/%s.%s.sql", folderPath, fileName, direction)
-		err := ioutil.WriteFile(fileLocation, []byte(""), 0644)
-		if err != nil {
+		if err := ioutil.WriteFile(fileLocation, []byte(""), 0644); err != nil {
 			panic(err)
 		}
-
 	}
 
-	color.Green("---> Created %s", fmt.Sprintf("%s.up.sql", fileName))
-	color.Green("---> Created %s", fmt.Sprintf("%s.down.sql", fileName))
+	fUp := fmt.Sprintf("%s.up.sql", fileName)
+	fDown := fmt.Sprintf("%s.down.sql", fileName)
+
+	color.Green(fmt.Sprintf("---> Created %s", fUp))
+	color.Green(fmt.Sprintf("---> Created %s", fDown))
+
+	return fUp, fDown
 
 }
 
@@ -82,7 +79,7 @@ func (migration *Migration) Migrate() {
 
 	// Get all migrate in migrate folder
 	migrateList := migration.readMigrateFolder()
-	// Run it
+	// Run them
 	migration.migrateUP(migrateList)
 }
 
@@ -90,9 +87,9 @@ func (migration *Migration) RollBack(step int) {
 	if step <= 0 {
 		return
 	}
-
-	migrateList := migration.readMigrateFolder() // Get all migrate in migrate folder
-	fmt.Printf("*** Rolling back last %v  migration ***\n", step)
+	color.Green("*** Rolling back last '%v' migrate ***\n", step)
+	// Get all migrate in migrate folder
+	migrateList := migration.readMigrateFolder()
 	migration.migrateDown(migrateList, step)
 }
 
@@ -141,13 +138,12 @@ func (migration *Migration) runUp(migrate *MigrateFile) {
 		panic(err)
 	}
 
-	err = trx.Commit()
-	if err != nil {
+	if err := trx.Commit(); err != nil {
 		panic(err)
 	}
 
 	task.RunTask(afterTask, migration.taskCMD)
-	fmt.Printf("== %s: done ======================================\n", migrate.Name)
+	fmt.Printf("== %s: done ==========================\n", migrate.Name)
 }
 
 func (migration *Migration) migrateUP(migrateList *MigrateList) {
@@ -174,7 +170,7 @@ func (migration *Migration) migrateUP(migrateList *MigrateList) {
 // Migrate down from current version
 func (migration *Migration) migrateDown(migrateList *MigrateList, step int) {
 	downMap := migration.getPreviousVersion(step)
-	downList := MigrateList{} // migrations are going to rollback
+	downList := MigrateList{} // migrations which are going to be rolled back
 
 	for _, migrate := range *migrateList {
 		_, ok := downMap[migrate.Version]
@@ -215,27 +211,12 @@ func (migration *Migration) runDown(migrate *MigrateFile) {
 		panic(err)
 	}
 
-	fmt.Printf("== %s: done ======================================\n", migrate.Name)
-}
-
-// Get current migrate version in  schema_migrations
-func (migration *Migration) getCurrentVersion() string {
-	statement := fmt.Sprintf(`SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1 `)
-	row := migration.DB.QueryRow(statement)
-	var version string
-	err := row.Scan(&version)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return "-1"
-		} else {
-			panic(err)
-		}
-	}
-	return version
+	fmt.Printf("== %s: done =============================\n", migrate.Name)
 }
 
 func (migration *Migration) getSchemaMigrations() map[string]int {
-	migationMap := map[string]int{}
+	migrationMap := map[string]int{}
+
 	rows, err := migration.DB.Query(`
 		SELECT 
 			version
@@ -255,10 +236,10 @@ func (migration *Migration) getSchemaMigrations() map[string]int {
 			panic(err)
 		}
 
-		migationMap[version] = 1
+		migrationMap[version] = 1
 	}
 
-	return migationMap
+	return migrationMap
 }
 
 func (migration *Migration) getPreviousVersion(step int) map[string]int {
@@ -315,25 +296,11 @@ func deleteMigrateVersion(trx *sql.Tx, version string) error {
 	return nil
 }
 
-func itemExists(arrayType interface{}, item interface{}) bool {
-	arr := reflect.ValueOf(arrayType)
-	if arr.Kind() != reflect.Slice {
-		panic("Invalid data-type")
-	}
-
-	for i := 0; i < arr.Len(); i++ {
-		if arr.Index(i).Interface() == item {
-			return true
-		}
-	}
-	return false
-}
-
 func unmarshal(s string) []string {
 	var arr []string
 	err := json.Unmarshal([]byte(s), &arr)
 	if err != nil {
-		panic(errors.New("Can't not unmarshal task list in migration"))
+		panic(errors.New("Can't not unmarshal task list in migrate"))
 	}
 	return arr
 }

@@ -18,7 +18,7 @@ func RunTask(task []string, taskCmd string) {
 	}
 
 	for _, taskName := range task {
-		color.Green(fmt.Sprintf(`=== Excute task '%s' ======================================`, taskName))
+		color.Green(fmt.Sprintf(`=== Excute task '%s' ======================`, taskName))
 		cmd := exec.Command("bash", "-c", fmt.Sprintf(`%s %s`, taskCmd, taskName))
 
 		output, err := cmd.Output()

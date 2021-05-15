@@ -31,7 +31,7 @@ func (migration *Migration) readMigrateFolder() *MigrateList {
 
 	for _, file := range files {
 		if !file.IsDir() {
-			migrateFile, err := Parse(file.Name())
+			migrateFile, err := parse(file.Name())
 			if err != nil {
 				color.Red(fmt.Sprintf(`Can not read file: '%s'`, file.Name()))
 				continue // ignore files that can't be parsed
@@ -44,7 +44,7 @@ func (migration *Migration) readMigrateFolder() *MigrateList {
 	return &migrateList
 }
 
-func Parse(raw string) (*MigrateFile, error) {
+func parse(raw string) (*MigrateFile, error) {
 	m := Regex.FindStringSubmatch(raw)
 	if len(m) == 5 {
 		return &MigrateFile{

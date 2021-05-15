@@ -1,7 +1,7 @@
 development:
   primary:
     type: "postgres"
-    database: "firstdb_development"
+    database: "primary_development"
     username: "developer"
     password: "developer"
     maxIdleConnection: 80
@@ -10,7 +10,7 @@ development:
     port: "5432"
   lottery:
     type: "postgres"
-    database: "seconddb_development"
+    database: "second_development"
     username: "developer"
     password: "developer"
     maxIdleConnection: 80
@@ -19,7 +19,7 @@ development:
     port: "5432"
   pools:
     type: "postgres"
-    database: "thirddb_development"
+    database: "third_development"
     username: "developer"
     password: "developer"
     maxIdleConnection: 80
@@ -30,7 +30,7 @@ development:
 test:
   primary:
     type: "postgres"
-    database: "firstdb_test"
+    database: "primary_test"
     username: "developer"
     password: "developer"
     maxIdleConnection: 80
@@ -39,7 +39,7 @@ test:
     port: "5432"
   lottery:
     type: "postgres"
-    database: "seconddb_test"
+    database: "second_test"
     username: "developer"
     password: "developer"
     maxIdleConnection: 80
@@ -48,7 +48,7 @@ test:
     port: "5432"
   pools:
     type: "postgres"
-    database: "thirddb_test"
+    database: "third_test"
     username: "developer"
     password: "developer"
     maxIdleConnection: 80

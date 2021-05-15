@@ -1,0 +1,59 @@
+development:
+  primary:
+    type: "postgres"
+    database: "primary_development"
+    username: "dever"
+    password: "dever"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5433"
+  replica:
+    type: "postgres"
+    database: "replica_development"
+    username: "dever"
+    password: "dever"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5433"
+  replica2:
+    type: "postgres"
+    database: "replica2_development"
+    username: "dever"
+    password: "dever"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5433"
+
+test:
+  primary:
+    type: "postgres"
+    database: "primary_test"
+    username: "dever"
+    password: "dever"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5433"
+  replica:
+    type: "postgres"
+    database: "replica_test"
+    username: "dever"
+    password: "dever"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5433"
+  replica2:
+    type: "postgres"
+    database: "replica2_test"
+    username: "dever"
+    password: "dever"
+    maxIdleConnection: 80
+    maxOpenConnection: 40
+    host: "127.0.0.1"
+    port: "5433"
+
+

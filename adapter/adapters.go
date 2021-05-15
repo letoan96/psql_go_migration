@@ -10,57 +10,34 @@ import (
 
 type DatabaseConfig map[string]*Adapter
 
-func InitializeMutipleAdapter(path string, env string, databases []string) []*Adapter {
+func InitializeMultipleAdapter(path string, env string, databases []string) map[string]*Adapter {
 	yamlFile, err := ioutil.ReadFile(path)
 	if err != nil {
-		fmt.Printf("Can't not read %v  err   #%v ", path, err)
+		panic(errors.New(fmt.Sprintf("Can't not read %v err #%v ", path, err)))
 	}
 
 	envConfig := make(map[string]DatabaseConfig)
-	err = yaml.Unmarshal(yamlFile, envConfig)
-	if err != nil {
-		fmt.Printf("Unmarshal: %v", err)
+	if err := yaml.Unmarshal(yamlFile, envConfig); err != nil {
+		panic(errors.New(fmt.Sprintf("Unmarshal: %v", err)))
 	}
 
-	enviroment, found := envConfig[env]
+	environment, found := envConfig[env]
 	if !found {
-		panic(errors.New(fmt.Sprintf(" ========== Can not read configurations of '%s' ᕙ(⇀‸↼‶)ᕗ =========", env)))
+		e := fmt.Sprintf(" ==== Can not read configurations for '%s' database ====", env)
+		panic(errors.New(e))
 	}
 
-	adapters := []*Adapter{}
-	for _, dbName := range databases {
-		adapter, found := enviroment[dbName]
-		if !found {
-			panic(errors.New(fmt.Sprintf(" ========== Can not read configurations for database '%s' =========", dbName)))
-		}
+	adapters := make(map[string]*Adapter)
+	if databases == nil || len(databases) == 0 {
+		return environment
+	}
 
-		adapters = append(adapters, adapter)
+	for _, dbName := range databases {
+		if adapters[dbName], found = environment[dbName]; !found {
+			e := fmt.Sprintf(" ==== Can not read configurations for database '%s' ====", dbName)
+			panic(errors.New(e))
+		}
 	}
 
 	return adapters
-}
-
-func InitializeAdapter(path string, env string, dbName string) *Adapter {
-	yamlFile, err := ioutil.ReadFile(path)
-	if err != nil {
-		fmt.Printf("Can't not read %v  err   #%v ", path, err)
-	}
-
-	envConfig := make(map[string]DatabaseConfig)
-	err = yaml.Unmarshal(yamlFile, envConfig)
-	if err != nil {
-		fmt.Printf("Unmarshal: %v", err)
-	}
-
-	enviroment, found := envConfig[env]
-	if !found {
-		panic(errors.New(fmt.Sprintf(" ========== Can not read configurations of '%s' ᕙ(⇀‸↼‶)ᕗ =========", env)))
-	}
-
-	adapter, found := enviroment[dbName]
-	if !found {
-		panic(errors.New(fmt.Sprintf(" ========== Can not read configurations for database '%s' =========", dbName)))
-	}
-
-	return adapter
 }
