@@ -55,33 +55,36 @@ func Rollback(configFilePath string, migrationDirectoryPath string, environment 
 
 // Databases --------------------------- For multiple databases -------------------
 
-func ConnectMultipleDB(configFilePath string, environment string, dbName []string) (databases map[string]*sql.DB) {
+func ConnectMultipleDB(configFilePath string, environment string, dbName []string) map[string]*sql.DB {
+	databases := map[string]*sql.DB{}
 	adapterMap := adapter.InitializeMultipleAdapter(configFilePath, environment, dbName)
 	for name, adapter := range adapterMap {
 		conn := adapter.ConnectToDatabase()
 		databases[name] = conn.DB
 	}
-	return
+
+	return databases
 }
 
 func MigrateSingleDB(configFilePath string, migrationDirectoryPath string, environment string, dbName string) {
 	green(">> Migrate '%s' database.", environment)
 	adapter := adapter.InitializeMultipleAdapter(configFilePath, environment, []string{dbName})[dbName]
 	conn := adapter.ConnectToDatabase()
-
+	defer conn.Close()
 	migrate(conn.DB, migrationDirectoryPath, adapter.TaskCMD)
 }
 
 func CreateSingleDB(configFilePath string, environment string, dbName string) {
 	adapter := adapter.InitializeMultipleAdapter(configFilePath, environment, []string{dbName})[dbName]
-	conn := adapter.ConnectToDatabase()
+	conn := adapter.ConnectToPostgres()
+	defer conn.Close()
 	create(conn)
 }
 
 func RollbackSingleDB(configFilePath string, migrationDirectoryPath string, environment string, dbName string, step int) {
 	adapter := adapter.InitializeMultipleAdapter(configFilePath, environment, []string{dbName})[dbName]
 	conn := adapter.ConnectToDatabase()
-
+	defer conn.Close()
 	rollback(migrationDirectoryPath, conn.DB, step)
 }
 

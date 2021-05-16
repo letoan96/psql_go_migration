@@ -28,7 +28,7 @@ func (c *Config) MigrateDatabase() {
 	Migrate(c.PathToDatabaseConfigFile, c.PathToMigrationDirectory, c.Environment)
 }
 
-func (c *Config) RollBack(step int) {
+func (c *Config) Rollback(step int) {
 	Rollback(c.PathToDatabaseConfigFile, c.PathToMigrationDirectory, c.Environment, step)
 }
 

@@ -62,10 +62,12 @@ func TestCreateMigration(t *testing.T) {
 }
 
 func TestMigrate(t *testing.T) {
-	c := NewConfig("development", "./db/migrate", "./db/database.yaml")
 	defer cleanMigrateFolder()
+
+	c := NewConfig("development", "./db/migrate", "./db/database.yaml")
 	c.DropDatabase()
 	c.CreateDatabase()
+
 	up, down := c.NewMigration("create_user")
 
 	qUp := fmt.Sprintf(`CREATE TABLE users (username text);`)
@@ -81,7 +83,45 @@ func TestMigrate(t *testing.T) {
 	}
 
 	c.MigrateDatabase()
-	c.RollBack(1)
+	c.Rollback(1)
+}
+
+func TestMultipleDatabase(t *testing.T) {
+	defer cleanMigrateFolder()
+	databases := []string{"primary", "replica", "replica2"}
+	c := NewConfigMultipleDatabase("development", "./db/migrate", "./db/multiple_database.yaml", databases)
+	c.CreateDatabase("primary")
+	c.CreateDatabase("replica")
+	c.CreateDatabase("replica2")
+
+	db := c.ConnectDatabase()
+	assert.Panics(t, func() { c.DropDatabase("primary") })
+	assert.Panics(t, func() { c.DropDatabase("replica") })
+	assert.Panics(t, func() { c.DropDatabase("replica2") })
+
+	up, down := c.NewMigration("create_user")
+	qUp := fmt.Sprintf(`CREATE TABLE users (username text);`)
+	fUp := fmt.Sprintf("./db/migrate/%s", up)
+	if err := ioutil.WriteFile(fUp, []byte(qUp), 0644); err != nil {
+		panic(err)
+	}
+
+	qDown := fmt.Sprintf(`DROP TABLE users;`)
+	fDown := fmt.Sprintf("./db/migrate/%s", down)
+	if err := ioutil.WriteFile(fDown, []byte(qDown), 0644); err != nil {
+		panic(err)
+	}
+
+	c.MigrateDatabase("primary")
+	c.Rollback("primary", 1)
+
+	db["primary"].Close()
+	db["replica"].Close()
+	db["replica2"].Close()
+
+	c.DropDatabase("primary")
+	c.DropDatabase("replica")
+	c.DropDatabase("replica2")
 }
 
 func cleanMigrateFolder() {
