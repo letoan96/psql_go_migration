@@ -23,7 +23,8 @@ func RunTask(task []string, taskCmd string) {
 
 		output, err := cmd.Output()
 		if err != nil {
-			fmt.Println(err)
+			color.Red("Failed command: " + fmt.Sprintf(`%s %s`, taskCmd, taskName))
+			panic(err)
 		}
 
 		fmt.Println(string(output))
